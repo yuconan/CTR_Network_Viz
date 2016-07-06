@@ -408,6 +408,7 @@ while not done:
 	#	- Internal network setup
 
 #Minor TODO:
+	# - Seperate Names & IP addresses
 	# - Add support for multiple simultaneous inputs
 	# - Add more icons, etc.
 	# - Graphical improvements
