@@ -33,6 +33,7 @@ pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.3)")
 #placeholder for app exit var
 done = False
 ignore_whitenoise = False
+has_Internet_node = False
 #IP address font (bundled TTF)
 font = pygame.font.Font("Monterey-Bold.ttf", 20)
 
@@ -81,6 +82,10 @@ def scapy_callback(p):
 	# not included in network.conf. 
 	if src == dst: 
 		return #ignore packet, do not draw
+	#If Internet node is not present
+	if src == "Internet" or dst == "Internet":
+		if not has_Internet_node:
+			return
 			
 	#Color based on TCP or UDP
 	try:
@@ -162,6 +167,8 @@ def isFile(path):
 
 #Read & parse network.conf
 def read_network_config(path="network.conf"):
+	global has_Internet_node
+
 	f = open(path)
 	for line in f.readlines():
 		#Skip commented or blank lines
@@ -194,6 +201,12 @@ def read_network_config(path="network.conf"):
 				print("Invalid file path on network cfg line: \'" + str(line).strip() + "\', skipping")
 				continue
 
+			if ip == "Internet":
+				has_Internet_node = True
+
+			nodes.append( Node(ip, x, y, path) )
+
+
 		#Read Routing Rules
 		elif kind == "RULE":
 			routing_rules.append(line.strip())
@@ -204,7 +217,7 @@ def read_network_config(path="network.conf"):
 			print("Invalid entry on network cfg line: \'" + str(line).strip() + "\', skipping")
 			continue
 
-		nodes.append( Node(ip, x, y, path) )
+		
 	f.close()
 	return
 
@@ -468,6 +481,7 @@ while not done:
 #0.1.3 (Ignore Whitenoise)
 	# - Added --ignore-whitenoise option
 	# - Code cleanup in Packet class
+	# - made Internet node optional
 
 
 #0.1.2 (Basic routing rule support)
