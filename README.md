@@ -5,8 +5,7 @@ the Cyber Test Range at the Laboratory for Analytic Sciences.
 
 Usage: python3 CTR_Network_Visualization.py /path/to/network.conf /path/to/triggers.conf file.pcap [options]<br />
   If a pcap is not provided, script will sniff on default network interface<br />
-  Optional: --ignore-whitenoise (at end of arguments) will hide any packet which does<br />
-    not meet a trigger defined in triggers.conf
+  Optional: --ignore-whitenoise (at end of arguments) will hide any packet which does not meet a trigger defined in triggers.conf
 
 Dependencies: python3, scapy-python3, pygame-python3
 
