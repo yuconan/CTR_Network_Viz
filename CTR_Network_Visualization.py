@@ -46,6 +46,8 @@ packets = []
 triggers = []
 #Routing rule list
 routing_rules = []
+#Connections
+lines = []
 
 #packet colors
 color_udp = "#00ff00"
@@ -203,6 +205,10 @@ def read_network_config(path="network.conf"):
 			routing_rules.append(line.strip())
 			
 			#TODO: Validate Routing Rules
+
+		#TODO: Validate
+		elif kind == "LINE":
+			lines.append( [str(arr[1].strip()), str(arr[2].strip())] )
 
 		else:
 			print("Invalid entry on network cfg line: \'" + str(line).strip() + "\', skipping")
@@ -472,6 +478,10 @@ while not done:
 	screen.fill((255,255,255))
 	#screen.fill(pygame.Color("#b3b3b3"))
 
+	for line in lines:
+		#TODO: fix color issue
+		pygame.draw.aaline(screen, (50,50,50), [getNodeByIP(line[0]).x+32, getNodeByIP(line[0]).y+32], [getNodeByIP(line[1]).x+32, getNodeByIP(line[1]).y+32], 2)
+
 	#display all nodes
 	for node in nodes:
 		node.update()
@@ -479,6 +489,7 @@ while not done:
 	#display all packets
 	for packet in packets:
 		packet.update()
+
 
 	#update screen (double buffering)
 	pygame.display.flip()
@@ -501,6 +512,7 @@ while not done:
 #0.1.5 (Trigger expansion) UNDER DEVELOPMENT
 	# - Increased information present and filters available
 	#   in triggers.conf
+	# - Added drawable lines to network conf file
 
 #0.1.4 (Visual Options)
 	# - Names now seperate entry from IP addresses
