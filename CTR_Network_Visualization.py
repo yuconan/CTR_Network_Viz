@@ -29,9 +29,10 @@ pygame.init()
 screen_width = 800
 screen_height = 450
 screen = None
-pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.1)")
+pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.3)")
 #placeholder for app exit var
 done = False
+ignore_whitenoise = False
 #IP address font (bundled TTF)
 font = pygame.font.Font("Monterey-Bold.ttf", 20)
 
@@ -88,6 +89,7 @@ def scapy_callback(p):
 	except:
 		color = color_tcp
 
+	is_whitenoise = True
 	#Process triggers
 	for t in triggers:
 			#Protocol (layer) trigger
@@ -96,8 +98,10 @@ def scapy_callback(p):
 				if proto in p: #find layer in packet
 					color = color_trigger
 					size = 13
+					is_whitenoise = False
 
-	packets.append ( Packet( src, dst, color, size) )
+	if (not ignore_whitenoise) or (ignore_whitenoise and not is_whitenoise):
+		packets.append ( Packet( src, dst, color, size) )
 
 #Sniff network, call callback function on each packet
 def scapy_sniff():
@@ -296,29 +300,26 @@ class Packet:
 
 	#Calc vector to next hop, based on routing rules
 	def calcNextHop(self):
-		#We've now arrived
-		last_location = self.next_dst_ip
+		has_matched = False
 		#Parse routing rules
 		for rule in routing_rules:
 			parts = rule.split(" ")
-			#See if we match 'from' in rule
-			if parts[2].strip() == "*" or last_location.startswith(parts[2].strip()):
+			#See if we match 'from' in rule (we've already arrived at next_dst_ip)
+			if parts[2].strip() == "*" or self.next_dst_ip.startswith(parts[2].strip()):
 				#Match from, do we match to?
 				if parts[4].strip() == "*" or self.final_dst_ip.startswith(parts[4].strip()):
 					#Match
 					self.next_dst_ip = str(parts[6].strip())
-					self.next_hop_x = getNodeByIP(self.next_dst_ip).x+30
-					self.next_hop_y = getNodeByIP(self.next_dst_ip).y+30
-					self.next_hop_x+=random.uniform(-5,5)
-					self.next_hop_y+=random.uniform(-5,5)
-					self.vector = calc_vector(self.next_hop_x, self.next_hop_y, self.x, self.y, 10)
-					self.size = self.orig_size
-					return
+					has_matched = True
+					break
 		#No routing rules match
-		self.next_dst_ip = self.final_dst_ip
+		if not has_matched:
+			self.next_dst_ip = self.final_dst_ip
+
+		#Find coordinates, calculate vector to next hop
 		self.next_hop_x = getNodeByIP(self.next_dst_ip).x+30
 		self.next_hop_y = getNodeByIP(self.next_dst_ip).y+30
-		self.next_hop_x+=random.uniform(-5,5)
+		self.next_hop_x+=random.uniform(-5,5) #aesthetics
 		self.next_hop_y+=random.uniform(-5,5)
 		self.vector = calc_vector(self.next_hop_x,self.next_hop_y, self.x, self.y, 10)
 		self.size = self.orig_size
@@ -364,10 +365,11 @@ class Packet:
 
 		#generate a UUID for packet identification for deletion
 		self.unique_id = uuid.uuid4() 
-
 		self.final_dst_ip = target_ip
 
+		#Default next_dst_ip to src_ip for calcNextHop()
 		self.next_dst_ip = src_ip
+
 		#Calculate path to next hop
 		self.calcNextHop()
 
@@ -383,7 +385,6 @@ if not (isFile(sys.argv[1]) and isFile(sys.argv[2])):
 	print("Config file not found")
 	exit(1)
 
-
 #Read, parse network.conf
 read_network_config(sys.argv[1])
 
@@ -392,10 +393,18 @@ read_triggers_config(sys.argv[2])
 
 #Determine if user passed a pcap file
 if len(sys.argv) > 3:
-	thread.start_new_thread(scapy_sniff_pcap, (sys.argv[3],) )
+	if sys.argv[3] == "--ignore-whitenoise":
+		ignore_whitenoise = True
+		thread.start_new_thread(scapy_sniff, ())
+	else:
+		if len(sys.argv) > 4 and sys.argv[4] == "--ignore-whitenoise":
+			ignore_whitenoise = True
+		thread.start_new_thread(scapy_sniff_pcap, (sys.argv[3],) )
 else:
 	#Launch network sniffer on thread 2 (gotta love Python)
 	thread.start_new_thread(scapy_sniff, ())
+
+
 
 #TODO: acceleration with scapy_parse_pcap function
 
@@ -439,7 +448,7 @@ while not done:
 
 
 #TODO:
-	# - Add more command line options
+	# - Add option to hide whitenoise
 	# - Add Internet Optional
 	# - Add packet display scaling option
 	# -> Add more trigger options <-
@@ -456,6 +465,11 @@ while not done:
 	# - Graphical improvements
 
 #========================== Changelog ==========================
+
+#0.1.3 (Ignore Whitenoise)
+	# - Added --ignore-whitenoise option
+	# - Code cleanup in Packet class
+
 
 #0.1.2 (Basic routing rule support)
 	# - Added support for routing rules in 
