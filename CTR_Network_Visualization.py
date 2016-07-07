@@ -448,7 +448,6 @@ while not done:
 
 
 #TODO:
-	# - Add option to hide whitenoise
 	# - Add Internet Optional
 	# - Add packet display scaling option
 	# -> Add more trigger options <-

@@ -3,7 +3,7 @@
 A Network scenario visualization tool, under early development by Brent Younce for
 the Cyber Test Range at the Laboratory for Analytic Sciences.
 
-Usage: python3 script.py /path/to/network.conf /path/to/triggers.conf file.pcap<br />
+Usage: python3 CTR_Network_Visualization.py /path/to/network.conf /path/to/triggers.conf file.pcap [options]<br />
   If a pcap is not provided, script will sniff on default network interface
   Optional: --ignore-whitenoise (at end of arguments) will hide any packet which does<br />
     not meet a trigger defined in triggers.conf
