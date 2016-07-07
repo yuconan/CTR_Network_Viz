@@ -42,6 +42,8 @@ nodes = []
 packets = []
 #trigger list (read from conf file)
 triggers = []
+#Routing rule list
+routing_rules = []
 
 #packet colors
 color_udp = "#00ff00"
@@ -188,10 +190,14 @@ def read_network_config(path="network.conf"):
 				print("Invalid file path on network cfg line: \'" + str(line).strip() + "\', skipping")
 				continue
 
-			#Parse Routers (TODO)
+		#Read Routing Rules
+		elif kind == "RULE":
+			routing_rules.append(line.strip())
+			
+			#TODO: Validate Routing Rules
 
 		else:
-			print("Invalid device type on network cfg line: \'" + str(line).strip() + "\', skipping")
+			print("Invalid entry on network cfg line: \'" + str(line).strip() + "\', skipping")
 			continue
 
 		nodes.append( Node(ip, x, y, path) )
@@ -278,58 +284,93 @@ class Node:
 #One packet to be displayed
 class Packet:
 	unique_id = None #UUID
+	orig_size = 5
 	size = 5
 	x = 0 #current position
 	y = 0
-	target_x = 0 #target coords
-	target_y = 0
+	next_dst_ip = None
+	final_dst_ip = None
 	vector = [] #direction vector
 
 	color = pygame.Color("#ff0000")
+
+	#Calc vector to next hop, based on routing rules
+	def calcNextHop(self):
+		#We've now arrived
+		last_location = self.next_dst_ip
+		#Parse routing rules
+		for rule in routing_rules:
+			parts = rule.split(" ")
+			#See if we match 'from' in rule
+			if parts[2].strip() == "*" or last_location.startswith(parts[2].strip()):
+				#Match from, do we match to?
+				if parts[4].strip() == "*" or self.final_dst_ip.startswith(parts[4].strip()):
+					#Match
+					self.next_dst_ip = str(parts[6].strip())
+					self.next_hop_x = getNodeByIP(self.next_dst_ip).x+30
+					self.next_hop_y = getNodeByIP(self.next_dst_ip).y+30
+					self.next_hop_x+=random.uniform(-5,5)
+					self.next_hop_y+=random.uniform(-5,5)
+					self.vector = calc_vector(self.next_hop_x, self.next_hop_y, self.x, self.y, 10)
+					self.size = self.orig_size
+					return
+		#No routing rules match
+		self.next_dst_ip = self.final_dst_ip
+		self.next_hop_x = getNodeByIP(self.next_dst_ip).x+30
+		self.next_hop_y = getNodeByIP(self.next_dst_ip).y+30
+		self.next_hop_x+=random.uniform(-5,5)
+		self.next_hop_y+=random.uniform(-5,5)
+		self.vector = calc_vector(self.next_hop_x,self.next_hop_y, self.x, self.y, 10)
+		self.size = self.orig_size
+		return
+
+	#Delete self if necessary, move, & draw
+	def update(self):
+		#Shrink as approaching destination
+		if self.next_dst_ip == self.final_dst_ip and abs(self.x - self.next_hop_x) < 20 and abs(self.y - self.next_hop_y) < 20:
+			self.size = int(self.size/2)
+
+		#If packet is very close to destination, delete
+		if(abs(self.x - self.next_hop_x) < 10 and abs(self.y - self.next_hop_y) < 10):
+			#If we've reached final hop
+			if(self.final_dst_ip == self.next_dst_ip):
+				for p in packets: #find self in list
+					if p.unique_id == self.unique_id: #identify by UUID
+						packets.remove(p) #delete
+						break
+			else:
+				self.calcNextHop()
+		else:
+			#draw
+			self.x+=self.vector[0]
+			self.y+=self.vector[1]
+			pygame.draw.circle(screen, (self.color), (int(self.x),int(self.y)), self.size)
 
 	def __init__(self, src_ip, target_ip, c="#ff0000", s=5):
 		#set starting coords to center of source square
 		self.x = getNodeByIP(src_ip).x+30
 		self.y = getNodeByIP(src_ip).y+30
-		#set target coords
-		self.target_x = getNodeByIP(target_ip).x+30
-		self.target_y = getNodeByIP(target_ip).y+30
+
 		#set color
 		self.color = pygame.Color(c)
 		#set size
 		self.size = s
+		self.orig_size = s
 
 		#Add small amount of randomness to starting & target coords
 		#  for aesthetics. Makes packets not all happen on a single line
 		self.x+=random.uniform(-5,5)
 		self.y+=random.uniform(-5,5)
 
-		self.target_x+=random.uniform(-5,5)
-		self.target_y+=random.uniform(-5,5)
-
-		#calculate movement vector
-		self.vector = calc_vector(self.target_x, self.target_y, self.x, self.y, 10)
 		#generate a UUID for packet identification for deletion
 		self.unique_id = uuid.uuid4() 
 
+		self.final_dst_ip = target_ip
 
-	#Delete self if necessary, move, & draw
-	def update(self):
-		#Shrink as approaching destination
-		if abs(self.x - self.target_x) < 20 and abs(self.y - self.target_y) < 20:
-			self.size = int(self.size/2)
+		self.next_dst_ip = src_ip
+		#Calculate path to next hop
+		self.calcNextHop()
 
-		#If packet is very close to destination, delete
-		if( abs(self.x - self.target_x) < 10 and abs(self.y - self.target_y) < 10):
-			for p in packets: #find self in list
-				if p.unique_id == self.unique_id: #identify by UUID
-					packets.remove(p) #delete
-					break
-		else:
-			#draw
-			self.x+=self.vector[0]
-			self.y+=self.vector[1]
-			pygame.draw.circle(screen, (self.color), (int(self.x),int(self.y)), self.size)
 
 #========================== Main ==========================
 
@@ -398,7 +439,8 @@ while not done:
 
 
 #TODO:
-	# -> Add routing support (w/ n-hops, failures) <-
+	# - Add more command line options
+	# - Add Internet Optional
 	# - Add packet display scaling option
 	# -> Add more trigger options <-
 	# - Add internal app menu system
@@ -414,6 +456,11 @@ while not done:
 	# - Graphical improvements
 
 #========================== Changelog ==========================
+
+#0.1.2 (Basic routing rule support)
+	# - Added support for routing rules in 
+	#   the network.conf file.
+	# - Bug Fixes
 
 #0.1.1 (Cleanup and preparation)
 	# - Updated TODO comments
