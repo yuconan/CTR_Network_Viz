@@ -29,7 +29,7 @@ pygame.init()
 screen_width = 800
 screen_height = 450
 screen = None
-pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.3)")
+pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.4)")
 #placeholder for app exit var
 done = False
 ignore_whitenoise = False
@@ -184,9 +184,10 @@ def read_network_config(path="network.conf"):
 			try:
 				#basic parsing
 				ip = str(arr[1])
-				x = int(arr[2])
-				y = int(arr[3])
-				path = str(arr[4]).strip()
+				name = str(arr[2])
+				x = int(arr[3])
+				y = int(arr[4])
+				path = str(arr[5]).strip()
 			except:
 				print("Skipping invalid network config entry: \'" + str(line).strip() + "\'")
 				continue
@@ -204,7 +205,7 @@ def read_network_config(path="network.conf"):
 			if ip == "Internet":
 				has_Internet_node = True
 
-			nodes.append( Node(ip, x, y, path) )
+			nodes.append( Node(ip, name, x, y, path) )
 
 
 		#Read Routing Rules
@@ -277,13 +278,18 @@ class Node:
 	x = 30
 	y = 30
 	img = None
+	name = None
 
 	# "constructor"
-	def __init__(self, new_ip, x_pos, y_pos, img_path=None):
+	def __init__(self, new_ip, new_name, x_pos, y_pos, img_path=None):
 		self.ip = new_ip
 		self.x = x_pos
 		self.y = y_pos
 		self.img = pygame.image.load(img_path)
+		if new_name == None or len(new_name.strip()) == 0:
+			self.name = ip
+		else:
+			self.name = new_name.strip()
 
 	#Display self
 	def update(self):
@@ -293,10 +299,10 @@ class Node:
 	##	else:
 	##		pygame.draw.rect(screen, self.color, pygame.Rect(self.x,self.y,60,60))
 		#display text
-		text = font.render(self.ip, True, (0,0,0))
-		text_width, text_height = font.size(self.ip)
+		text = font.render(self.name, True, (0,0,0))
+		text_width, text_height = font.size(self.name)
 
-		screen.blit(text, (self.x-(text_width/4), self.y+70))
+		screen.blit(text, (self.x+32-(text_width/2), self.y+70))
 
 #One packet to be displayed
 class Packet:
@@ -447,6 +453,7 @@ while not done:
 
 	#empty screen
 	screen.fill((255,255,255))
+	#screen.fill(pygame.Color("#b3b3b3"))
 
 	#display all nodes
 	for node in nodes:
@@ -461,24 +468,23 @@ while not done:
 
 
 #TODO:
-	# - Add Internet Optional
+	# - Test with more datasets, develop new examples
 	# - Add packet display scaling option
 	# -> Add more trigger options <-
-	# - Add internal app menu system
-	#	- Pop-ups
-	#	- Menu bar
-	#	- Overhaul saving/loading
-	#	- Internal network setup
 
 #Minor TODO:
-	# - Seperate Names & IP addresses
 	# - Add support for multiple simultaneous inputs
 	# - Add more icons, etc.
 	# - Graphical improvements
 
 #========================== Changelog ==========================
 
-#0.1.3 (Ignore Whitenoise)
+#0.1.4 (Visual Options)
+	# - Names now seperate entry from IP addresses
+	# - second icon set added
+	# - minor cleanup, bug fixes
+
+#0.1.3 (New Options)
 	# - Added --ignore-whitenoise option
 	# - Code cleanup in Packet class
 	# - made Internet node optional
