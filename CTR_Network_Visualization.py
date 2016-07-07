@@ -490,6 +490,8 @@ while not done:
 	# -> Add more trigger options <-
 
 #Minor TODO:
+	# - Clean up how arguments are handled
+	# - Add more checking of conf files
 	# - Add support for multiple simultaneous inputs
 	# - Add more icons, etc.
 	# - Graphical improvements
@@ -509,7 +511,6 @@ while not done:
 	# - Added --ignore-whitenoise option
 	# - Code cleanup in Packet class
 	# - made Internet node optional
-
 
 #0.1.2 (Basic routing rule support)
 	# - Added support for routing rules in 

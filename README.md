@@ -13,7 +13,7 @@ To run the 'bigFlows' demo:<br />
 	- Download 'bigFlows.pcap' from: http://tcpreplay.appneta.com/wiki/captures.html<br />
 	- Run: python3 CTR_Network_Visualization.py examples/network_bigFlows.conf examples/triggers_bigFlows.conf /path/to/bigFlows.pcap
 
-To run routing demo on live network:<br />
+To run the routing demo on live network:<br />
 	- Configure IPs (and, optionally, rules) in examples/network_Routing.conf to your LAN IPs<br />
 	- Run: python3 CTR_Network_Visualization.py examples/network_Routing.conf examples/triggers_Routing.conf
 	
