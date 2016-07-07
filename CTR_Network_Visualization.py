@@ -29,7 +29,7 @@ pygame.init()
 screen_width = 800
 screen_height = 450
 screen = None
-pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.4)")
+pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.5)")
 #placeholder for app exit var
 done = False
 ignore_whitenoise = False
@@ -88,25 +88,15 @@ def scapy_callback(p):
 			return
 			
 	#Color based on TCP or UDP
-	try:
-		p[TCP]
-		color = color_udp
-	except:
+	if "TCP" in p:
 		color = color_tcp
+	else:
+		color = color_udp
 
 	is_whitenoise = True
-	#Process triggers
-	for t in triggers:
-			#Protocol (layer) trigger
-			if t.startswith("protocol="):
-				proto = str(t.split("=")[1].strip().upper())
-				if proto in p: #find layer in packet
-					color = color_trigger
-					size = 13
-					is_whitenoise = False
 
 	if (not ignore_whitenoise) or (ignore_whitenoise and not is_whitenoise):
-		packets.append ( Packet( src, dst, color, size) )
+		packets.append ( Packet( p, src, dst, color, size) )
 
 #Sniff network, call callback function on each packet
 def scapy_sniff():
@@ -114,7 +104,7 @@ def scapy_sniff():
 
 #Automatic sniffing from pcap (realtime)
 def scapy_sniff_pcap(path):
-	sniff(filter="ip", prn=scapy_callback, offline=path, store=0)
+	sniff(filter="ip", prn=scapy_callback, offline=path)
 
 #Parse pcap file manually. This reads all into memory, and can
 #  support custom time acceleration, etc.
@@ -230,11 +220,9 @@ def read_triggers_config(path="triggers.conf"):
 		if line.startswith("//"):
 			continue
 
-		#Validate, add protocol trigger
-		if line.startswith("protocol=") and len(line.split("=")[1].strip()) <= 5:
-			triggers.append(str(line))
-		else:
-			print("Skipping invalid trigger: \'" + line.strip() + "\'")
+		#Add trigger
+		triggers.append(line.strip())
+
 	#Clean up and exit
 	f.close()
 	return
@@ -306,6 +294,7 @@ class Node:
 
 #One packet to be displayed
 class Packet:
+	p = None
 	unique_id = None #UUID
 	orig_size = 5
 	size = 5
@@ -313,6 +302,7 @@ class Packet:
 	y = 0
 	next_dst_ip = None
 	final_dst_ip = None
+	src_ip = None
 	vector = [] #direction vector
 
 	color = pygame.Color("#ff0000")
@@ -344,6 +334,30 @@ class Packet:
 		self.size = self.orig_size
 		return
 
+	#At beginning, check for applicable 'highlight' triggers
+	def checkHighlightTriggers(self):
+		for t in triggers:
+			arr = t.split(" ")
+			#Only scan highlight triggers
+			if arr[5].strip().upper() == "HIGHLIGHT":
+				#Clean up, get text after protocol=
+				proto = arr[0].split("=")[1].strip().upper()
+				#Check protocol
+				if proto == "*" or proto in self.p:
+					#Check src
+					if self.src_ip.startswith(arr[2].strip()) or arr[2].strip() == "*":
+						#Check dst
+						if self.final_dst_ip.startswith(arr[4].strip()) or "*" == arr[4].strip():
+							#Apply highlight
+							self.size = 10
+							self.orig_size = 10
+							self.color = pygame.Color(color_trigger)
+							return
+
+	#"Impact" triggers - not yet implemented (TODO)
+	def checkImpactTriggers(self):
+		return
+
 	#Delete self if necessary, move, & draw
 	def update(self):
 		#Shrink as approaching destination
@@ -366,11 +380,12 @@ class Packet:
 			self.y+=self.vector[1]
 			pygame.draw.circle(screen, (self.color), (int(self.x),int(self.y)), self.size)
 
-	def __init__(self, src_ip, target_ip, c="#ff0000", s=5):
+	def __init__(self, packet, src_ip, target_ip, c="#ff0000", s=5):
 		#set starting coords to center of source square
 		self.x = getNodeByIP(src_ip).x+30
 		self.y = getNodeByIP(src_ip).y+30
-
+		self.p = packet
+		self.src_ip = src_ip
 		#set color
 		self.color = pygame.Color(c)
 		#set size
@@ -391,6 +406,8 @@ class Packet:
 
 		#Calculate path to next hop
 		self.calcNextHop()
+		#"Highlight" triggers can be applied now
+		self.checkHighlightTriggers()
 
 
 #========================== Main ==========================
@@ -478,6 +495,10 @@ while not done:
 	# - Graphical improvements
 
 #========================== Changelog ==========================
+
+#0.1.5 (Trigger expansion) UNDER DEVELOPMENT
+	# - Increased information present and filters available
+	#   in triggers.conf
 
 #0.1.4 (Visual Options)
 	# - Names now seperate entry from IP addresses
