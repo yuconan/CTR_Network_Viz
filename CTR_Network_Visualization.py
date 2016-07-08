@@ -29,13 +29,13 @@ pygame.init()
 screen_width = 800
 screen_height = 450
 screen = None
-pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.5)")
+pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.6)")
 #placeholder for app exit var
 done = False
 ignore_whitenoise = False
 has_Internet_node = False
 #IP address font (bundled TTF)
-font = pygame.font.Font("Monterey-Bold.ttf", 20)
+font = pygame.font.Font("Roboto.ttf", 18)
 
 
 #list of nodes (computers on network to display)
@@ -51,8 +51,8 @@ lines = []
 
 #packet colors
 color_udp = "#00ff00"
-color_tcp = "#ff0000"
-color_trigger = "#000000"
+color_tcp = "#00ff00"
+color_trigger = "#ff0000"
 
 #Functions
 
@@ -343,7 +343,7 @@ class Packet:
 	def matchesTrigger(self, arr):
 		proto = arr[0].split("=")[1].strip().upper()
 		#Check protocol
-		if proto == "*" or proto in self.p:
+		if proto == "*" or proto in self.p.summary().upper():
 			#Check src
 			if self.src_ip.startswith(arr[2].strip()) or arr[2].strip() == "*":
 				#Check dst
@@ -529,9 +529,12 @@ while not done:
 	# - Graphical improvements
 
 #========================== Changelog ==========================
+#0.1.6 (Visuals & More) UNDER DEVELOPMENT
+	# - Tweaked protocol trigger code, many more protocols should now
+	#   be supported
+	# - New font (Roboto - android's new Material Design font)
 
-
-#0.1.5 (Triggers.conf)
+#0.1.5 (Triggers.conf update pt 1)
 	# - Increased information present and filters available
 	#   in triggers.conf
 	# - Added drawable lines to network conf file
