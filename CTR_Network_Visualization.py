@@ -95,7 +95,7 @@ def scapy_callback(p):
 	else:
 		color = color_udp
 
-	is_whitenoise = True
+	is_whitenoise = True #TODO: broken, isn't everything whitenoisew with this?
 
 	if (not ignore_whitenoise) or (ignore_whitenoise and not is_whitenoise):
 		packets.append ( Packet( p, src, dst, color, size) )
@@ -108,28 +108,25 @@ def scapy_sniff():
 def scapy_sniff_pcap(path):
 	sniff(filter="ip", prn=scapy_callback, offline=path)
 
-#Parse pcap file manually. This reads all into memory, and can
-#  support custom time acceleration, etc.
+#Parse pcap file manually. This should support time acceleration,
+# and allow for more customization than scapy_sniff_pcap
 def scapy_parse_pcap(path, accel=1.0):
-	cap = rdpcap(path)
-	index = 0
-	curr_time = cap[index].time #time of last packet displayed
-
-	while index < len(cap):
-		#Get packet to display
-		pkt = cap[index]
-		#Display packet
-		scapy_callback(pkt)
-		try:
-			#Delay between current packet and next
-			delay = (cap[index+1].time - curr_time)/accel
-			#Update current time
-			curr_time = cap[index+1].time
-			#Update index
-			index+= 1
-		except: #Ran out of packets or error
-			break
-		sleep(delay)
+	with PcapReader(path) as pcap_reader:
+		last_time = None
+		for pkt in pcap_reader:
+			if last_time is None:
+				delay = 0.0
+			else:
+				#Delay between current packet and next
+				delay = (pkt.time - last_time)/accel
+			#Update last time
+			last_time = pkt.time
+			#Wait time difference between packets
+			sleep(delay)
+			#Display packet
+			#ISSUE: this takes time, causing delay to be off and slow
+			# potential solution: third thread for display queue (TODO)
+			scapy_callback(pkt) 
 	return
 	
 
@@ -499,6 +496,7 @@ while not done:
 	# - Test with more datasets, develop new examples
 	# - Add packet display scaling option
 	# -> Add more trigger options <-
+	# - Add time acceleration
 
 #Minor TODO:
 	# - Clean up how arguments are handled
@@ -509,7 +507,8 @@ while not done:
 
 #========================== Changelog ==========================
 
-#0.1.5 (Trigger expansion) UNDER DEVELOPMENT
+
+#0.1.5 (Triggers.conf)
 	# - Increased information present and filters available
 	#   in triggers.conf
 	# - Added drawable lines to network conf file
