@@ -50,8 +50,8 @@ routing_rules = []
 lines = []
 
 #packet colors
-color_udp = "#00ff00"
-color_tcp = "#00ff00"
+color_udp = "#00ee00"
+color_tcp = "#00ee00"
 color_trigger = "#ff0000"
 
 #Functions
@@ -533,6 +533,7 @@ while not done:
 	# - Tweaked protocol trigger code, many more protocols should now
 	#   be supported
 	# - New font (Roboto - android's new Material Design font)
+	# - New icons: both demos now have much more modern design
 
 #0.1.5 (Triggers.conf update pt 1)
 	# - Increased information present and filters available
