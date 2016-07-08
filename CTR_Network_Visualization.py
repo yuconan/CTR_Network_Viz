@@ -95,10 +95,9 @@ def scapy_callback(p):
 	else:
 		color = color_udp
 
-	is_whitenoise = True #TODO: broken, isn't everything whitenoisew with this?
-
-	if (not ignore_whitenoise) or (ignore_whitenoise and not is_whitenoise):
-		packets.append ( Packet( p, src, dst, color, size) )
+	obj = Packet( p, src, dst, color, size)
+	if not (ignore_whitenoise and obj.isWhitenoise()):
+		packets.append ( obj )
 
 #Sniff network, call callback function on each packet
 def scapy_sniff():
@@ -337,29 +336,55 @@ class Packet:
 		self.size = self.orig_size
 		return
 
+	#After splitting a trigger line and determining the trigger type,
+	#  this function tests it the trigger matches. It exists to remove
+	#  redundent code which would be in place in every checkXXXTrigger
+	#  function.
+	def matchesTrigger(self, arr):
+		proto = arr[0].split("=")[1].strip().upper()
+		#Check protocol
+		if proto == "*" or proto in self.p:
+			#Check src
+			if self.src_ip.startswith(arr[2].strip()) or arr[2].strip() == "*":
+				#Check dst
+				if self.final_dst_ip.startswith(arr[4].strip()) or "*" == arr[4].strip():
+					return True
+		return False
+
+	#See if any trigger matches
+	def isWhitenoise(self):
+		for t in triggers:
+			arr = t.split(" ")
+			if self.matchesTrigger(arr):
+				return False
+		return True
+
+
 	#At beginning, check for applicable 'highlight' triggers
 	def checkHighlightTriggers(self):
 		for t in triggers:
 			arr = t.split(" ")
 			#Only scan highlight triggers
 			if arr[5].strip().upper() == "HIGHLIGHT":
-				#Clean up, get text after protocol=
-				proto = arr[0].split("=")[1].strip().upper()
-				#Check protocol
-				if proto == "*" or proto in self.p:
-					#Check src
-					if self.src_ip.startswith(arr[2].strip()) or arr[2].strip() == "*":
-						#Check dst
-						if self.final_dst_ip.startswith(arr[4].strip()) or "*" == arr[4].strip():
-							#Apply highlight
-							self.size = 10
-							self.orig_size = 10
-							self.color = pygame.Color(color_trigger)
-							return
+				if self.matchesTrigger(arr):
+					#Apply highlight
+					self.size = 10
+					self.orig_size = 10
+					self.color = pygame.Color(color_trigger)
+					return
 
 	#"Impact" triggers - not yet implemented (TODO)
 	def checkImpactTriggers(self):
 		return
+
+	#find self in list via UUID, delete
+	def deleteSelf(self):
+		global packets
+		for p in packets: #find self in list
+			if p.unique_id == self.unique_id: #identify by UUID
+				packets.remove(p) #delete
+				return
+		print("Couldnt find it")
 
 	#Delete self if necessary, move, & draw
 	def update(self):
@@ -371,10 +396,7 @@ class Packet:
 		if(abs(self.x - self.next_hop_x) < 10 and abs(self.y - self.next_hop_y) < 10):
 			#If we've reached final hop
 			if(self.final_dst_ip == self.next_dst_ip):
-				for p in packets: #find self in list
-					if p.unique_id == self.unique_id: #identify by UUID
-						packets.remove(p) #delete
-						break
+				self.deleteSelf()
 			else:
 				self.calcNextHop()
 		else:
@@ -384,6 +406,9 @@ class Packet:
 			pygame.draw.circle(screen, (self.color), (int(self.x),int(self.y)), self.size)
 
 	def __init__(self, packet, src_ip, target_ip, c="#ff0000", s=5):
+		#generate a UUID for packet identification for deletion
+		self.unique_id = uuid.uuid4() 
+
 		#set starting coords to center of source square
 		self.x = getNodeByIP(src_ip).x+30
 		self.y = getNodeByIP(src_ip).y+30
@@ -400,8 +425,6 @@ class Packet:
 		self.x+=random.uniform(-5,5)
 		self.y+=random.uniform(-5,5)
 
-		#generate a UUID for packet identification for deletion
-		self.unique_id = uuid.uuid4() 
 		self.final_dst_ip = target_ip
 
 		#Default next_dst_ip to src_ip for calcNextHop()
@@ -512,6 +535,7 @@ while not done:
 	# - Increased information present and filters available
 	#   in triggers.conf
 	# - Added drawable lines to network conf file
+	# - Fixed --ignore-whitenoise
 
 #0.1.4 (Visual Options)
 	# - Names now seperate entry from IP addresses
