@@ -17,5 +17,6 @@ To run the routing demo on live network:<br />
 	- Configure IPs (and, optionally, rules) in examples/network_Routing.conf to your LAN IPs<br />
 	- Run: python3 CTR_Network_Visualization.py examples/network_Routing.conf examples/triggers_Routing.conf<br />
 
-![Alt screenshot](img/screenshot_0.1.6.png?raw=true)
-	
+![Alt screenshot](img/screenshot_0.1.6.png?raw=true "bigFlows Demo")
+	<br />
+![Alt screenshot](img/screenshot2.png?raw=true "Routing Demo")
