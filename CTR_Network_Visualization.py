@@ -29,7 +29,7 @@ pygame.init()
 screen_width = 800
 screen_height = 450
 screen = None
-pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.6)")
+pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.7)")
 #placeholder for app exit var
 done = False
 ignore_whitenoise = False
@@ -75,9 +75,9 @@ def scapy_callback(p):
 	#Map Packet source to existing node
 	#If no existing node, default to Internet
 	for node in nodes:
-		if p[IP].src == node.ip:
+		if p[IP].src.startswith(node.ip):
 			src = node.ip
-		if p[IP].dst == node.ip:
+		if p[IP].dst.startswith(node.ip):
 			dst = node.ip
 	#if src == dst, usually Internet == Internet, 
 	# usually caused by communication between nodes
@@ -126,7 +126,7 @@ def scapy_parse_pcap(path, accel=1.0):
 			#ISSUE: this takes time, causing delay to be off and slow
 			# potential solution: third thread for display queue (TODO)
 			scapy_callback(pkt) 
-	return
+		print("Done")
 	
 
 #========================== Data Manipulation Functions ==========================
@@ -134,7 +134,7 @@ def scapy_parse_pcap(path, accel=1.0):
 #get node from node list by IP address
 def getNodeByIP(ip_addr):
 	for node in nodes:
-		if node.ip == ip_addr:
+		if node.ip.startswith(ip_addr):
 			return node
 	#raise exception if non existant
 	raise Exception("Node does not exist")
@@ -389,13 +389,13 @@ class Packet:
 	#Delete self if necessary, move, & draw
 	def update(self):
 		#Shrink as approaching destination
-		if self.next_dst_ip == self.final_dst_ip and abs(self.x - self.next_hop_x) < 20 and abs(self.y - self.next_hop_y) < 20:
+		if self.next_dst_ip.startswith(self.final_dst_ip) and abs(self.x - self.next_hop_x) < 20 and abs(self.y - self.next_hop_y) < 20:
 			self.size = int(self.size/2)
 
 		#If packet is very close to destination, delete
 		if(abs(self.x - self.next_hop_x) < 10 and abs(self.y - self.next_hop_y) < 10):
 			#If we've reached final hop
-			if(self.final_dst_ip == self.next_dst_ip):
+			if(self.final_dst_ip.startswith(self.next_dst_ip)):
 				self.deleteSelf()
 			else:
 				self.calcNextHop()
@@ -439,7 +439,7 @@ class Packet:
 #========================== Main ==========================
 
 #Validate args
-if len(sys.argv) < 2:
+if len(sys.argv) < 3:
 	print("Usage: python3 <script>.py PATH_OF_network.conf PATH_OF_triggers.conf file.pcap")
 	print("  If a pcap is not provided, script will sniff on default network interface")
 	exit(1)
@@ -461,7 +461,7 @@ if len(sys.argv) > 3:
 	else:
 		if len(sys.argv) > 4 and sys.argv[4] == "--ignore-whitenoise":
 			ignore_whitenoise = True
-		thread.start_new_thread(scapy_sniff_pcap, (sys.argv[3],) )
+		thread.start_new_thread(scapy_parse_pcap, (sys.argv[3],) )
 else:
 	#Launch network sniffer on thread 2 (gotta love Python)
 	thread.start_new_thread(scapy_sniff, ())
@@ -529,7 +529,12 @@ while not done:
 	# - Graphical improvements
 
 #========================== Changelog ==========================
-#0.1.6 (Visuals & More) UNDER DEVELOPMENT
+#0.1.7 (Time Acceleration) UNDER DEVELOPMENt
+	# - Changed primary parse function to scapy_parse_pcap
+	# - Added strip_pcap script
+	# - Added support for startswith (whole subnet) nodes
+
+#0.1.6 (Visuals & More)
 	# - Tweaked protocol trigger code, many more protocols should now
 	#   be supported
 	# - New font (Roboto - android's new Material Design font)
