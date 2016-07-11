@@ -25,11 +25,13 @@ except ImportError:
 
 pygame.init()
 
+viz_accel = 5000.0
+
 #initialize screen
 screen_width = 800
 screen_height = 450
 screen = None
-pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.7)")
+pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.8)")
 #placeholder for app exit var
 done = False
 ignore_whitenoise = False
@@ -109,7 +111,7 @@ def scapy_sniff_pcap(path):
 
 #Parse pcap file manually. This should support time acceleration,
 # and allow for more customization than scapy_sniff_pcap
-def scapy_parse_pcap(path, accel=1.0):
+def scapy_parse_pcap(path, accel=viz_accel):
 	with PcapReader(path) as pcap_reader:
 		last_time = None
 		for pkt in pcap_reader:
@@ -361,21 +363,43 @@ class Packet:
 
 
 	#At beginning, check for applicable 'highlight' triggers
-	def checkHighlightTriggers(self):
+	def checkHighlightAndDisplayTriggers(self):
 		for t in triggers:
 			arr = t.split(" ")
-			#Only scan highlight triggers
-			if arr[5].strip().upper() == "HIGHLIGHT":
-				if self.matchesTrigger(arr):
-					#Apply highlight
-					self.size = 10
-					self.orig_size = 10
-					self.color = pygame.Color(color_trigger)
-					return
+			kind = arr[5].strip().upper()
+			#make sure we match trigger first
+			if not self.matchesTrigger(arr):
+				continue
 
-	#"Impact" triggers - not yet implemented (TODO)
+			if kind == "HIGHLIGHT":
+				#Apply highlight
+				self.size = 10
+				self.orig_size = 10
+				self.color = pygame.Color(color_trigger)
+			elif kind == "DISPLAY":
+				self.size = 5
+				self.orig_size = 5
+				self.color = pygame.Color(color_udp)
+			elif kind == "CHANGE_SRC_ICON":
+				#may be inefficient in bulk
+				getNodeByIP(self.src_ip).img = pygame.image.load(arr[6].strip())
+			elif kind == "COLOR":
+				self.color = pygame.Color(str(arr[6].strip()))
+
+
+	#"Impact" triggers
 	def checkImpactTriggers(self):
-		return
+		for t in triggers:
+			arr = t.split(" ")
+			if not self.matchesTrigger(arr):
+				continue
+
+			if arr[5].strip().upper() == "CHANGE_DST_ICON":
+				#may be inefficient in bulk
+				getNodeByIP(self.final_dst_ip).img = pygame.image.load(arr[6].strip())
+				continue
+
+
 
 	#find self in list via UUID, delete
 	def deleteSelf(self):
@@ -396,6 +420,7 @@ class Packet:
 		if(abs(self.x - self.next_hop_x) < 10 and abs(self.y - self.next_hop_y) < 10):
 			#If we've reached final hop
 			if(self.final_dst_ip.startswith(self.next_dst_ip)):
+				self.checkImpactTriggers()
 				self.deleteSelf()
 			else:
 				self.calcNextHop()
@@ -432,8 +457,8 @@ class Packet:
 
 		#Calculate path to next hop
 		self.calcNextHop()
-		#"Highlight" triggers can be applied now
-		self.checkHighlightTriggers()
+		#"Highlight" and "Display" triggers can be applied now
+		self.checkHighlightAndDisplayTriggers()
 
 
 #========================== Main ==========================
@@ -510,7 +535,6 @@ while not done:
 	for packet in packets:
 		packet.update()
 
-
 	#update screen (double buffering)
 	pygame.display.flip()
 
@@ -529,7 +553,14 @@ while not done:
 	# - Graphical improvements
 
 #========================== Changelog ==========================
-#0.1.7 (Time Acceleration) UNDER DEVELOPMENt
+
+#0.1.8 (Triggers.conf update pt 2)
+	# - Added 'display' trigger (for --ignore-whitenoise or strip_pcap)
+	# - Added 'change_dst_icon' and 'change_src_icon' triggers
+	# - Added 'color' trigger
+	# - Fixed trigger filter matching bug
+
+#0.1.7 (Time Acceleration)
 	# - Changed primary parse function to scapy_parse_pcap
 	# - Added strip_pcap script
 	# - Added support for startswith (whole subnet) nodes
