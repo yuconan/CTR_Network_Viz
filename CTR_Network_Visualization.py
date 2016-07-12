@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-#Network (attack) visualization tool Proof-Of-Concept / Pre-Alpha
+#Network (attack) visualization tool Proof-Of-Concept / Early Beta
 #Author: Brent Younce (brent@younce.me, bjyounce@ncsu.edu)
 #For the Cyber Test Range at LAS
 
@@ -25,7 +25,7 @@ except ImportError:
 
 pygame.init()
 
-viz_accel = 5000.0
+viz_accel = 1.0 #Time Acceleration in scapy_parse_pcap
 
 #initialize screen
 screen_width = 800
@@ -204,9 +204,22 @@ def read_network_config(path="network.conf"):
 			
 			#TODO: Validate Routing Rules
 
-		#TODO: Validate
 		elif kind == "LINE":
-			lines.append( [str(arr[1].strip()), str(arr[2].strip())] )
+			try:
+				ip1 = str(arr[1].strip())
+				ip2 = str(arr[2].strip())
+				#validate IPs
+				getNodeByIP(ip1)
+				getNodeByIP(ip2)
+				#okay, they exist, lets add
+				lines.append( [ip1, ip2] )
+			except IndexError: #thrown if IPs not given in line
+				print("Missing IPs in Line entry on network cfg line: \'" + str(line).strip() + "\', skipping")
+				continue
+			except: #generic exception thrown by getNodeByIP
+				print("Invalid IPs in Line entry on network cfg line: \'" + str(line).strip() + "\', skipping")
+				continue
+
 
 		else:
 			print("Invalid entry on network cfg line: \'" + str(line).strip() + "\', skipping")
@@ -553,6 +566,14 @@ while not done:
 	# - Graphical improvements
 
 #========================== Changelog ==========================
+#0.2.0 (BETA 1) UNDER DEVELOPMENT
+	# This update focuses on fixing bugs, making code cleaner,
+	#   and adding more user input error checking. At this point,
+	#   the script contains many of the features it was originally
+	#   intended to have, although not all.
+	#
+	# - Added input error checking for network.cfg LINE entries
+
 
 #0.1.8 (Triggers.conf update pt 2)
 	# - Added 'display' trigger (for --ignore-whitenoise or strip_pcap)
