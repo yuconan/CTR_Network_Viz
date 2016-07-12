@@ -242,7 +242,7 @@ def read_triggers_config(path="triggers.conf"):
 	f = open(path)
 	for line in f.readlines():
 		#Skip commented out lines
-		if line.startswith("//"):
+		if line.startswith("//") or line.isspace():
 			continue
 
 		#Add trigger
@@ -386,6 +386,7 @@ class Packet:
 	#At beginning, check for applicable 'highlight' triggers
 	def checkHighlightAndDisplayTriggers(self):
 		for t in triggers:
+			print("T: \'" + t + "\'")
 			arr = t.split(" ")
 			kind = arr[5].strip().upper()
 			#make sure we match trigger first
@@ -522,20 +523,24 @@ for i in range(0,l):
 			print(">>> Example: -n /root/network.conf            <<<")
 		else:
 			nconf_path = nextarg
+	#Parse triggers.conf
 	elif currarg_lower == "-t":
 		if nextarg == None:
 			print(">>> -t requires the path of your triggers.conf<<<")
 			print(">>> Example: -t /root/triggers.conf           <<<")
 		else:
 			tconf_path = nextarg
+	#Parse pcap
 	elif currarg_lower == "-p" or currarg_lower == "--pcap":
 		if nextarg == None:
 			print(">>> -p or --pcap requires a pcap path         <<<")
 			print(">>> Example: --pcap /root/file.pcap           <<<")
 		else:
 			pcap_paths.append(nextarg)
+	#Parse --ignore-whitenoise
 	elif currarg_lower == "-i" or currarg_lower == "--ignore-whitenoise":
 		ignore_whitenoise = True
+	#Parse pcap time acceleration
 	elif currarg_lower == "-a" or currarg_lower == "--accel" or currarg_lower == "--acceleration":
 		if nextarg == None or not isInt(nextarg):
 			print(">>> -a or --accel requires an integer argument <<<")
