@@ -175,7 +175,6 @@ def read_network_config(path="network.conf"):
 
 		arr = line.split(" ")
 		#Determine device type (the string 'type' itself is reserved)
-		#TODO: Checks here
 		kind = str(arr[0]).strip().upper()
 		if kind == "NODE":
 			#Parse Node
@@ -386,7 +385,6 @@ class Packet:
 	#At beginning, check for applicable 'highlight' triggers
 	def checkHighlightAndDisplayTriggers(self):
 		for t in triggers:
-			print("T: \'" + t + "\'")
 			arr = t.split(" ")
 			kind = arr[5].strip().upper()
 			#make sure we match trigger first
@@ -407,6 +405,8 @@ class Packet:
 				getNodeByIP(self.src_ip).img = pygame.image.load(arr[6].strip())
 			elif kind == "COLOR":
 				self.color = pygame.Color(str(arr[6].strip()))
+			elif kind == "HIDE":
+				self.deleteSelf()
 
 
 	#"Impact" triggers
@@ -634,6 +634,7 @@ while not done:
 	# - Overhauled argument parsing
 	#   - Added support for -a/--accel in the process
 	#	- Added (experimental) support for multiple pcaps
+	# - Added 'hide' trigger
 
 
 #0.1.8 (Triggers.conf update pt 2)
