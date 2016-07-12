@@ -31,7 +31,7 @@ viz_accel = 1.0 #Time Acceleration in scapy_parse_pcap
 screen_width = 800
 screen_height = 450
 screen = None
-pygame.display.set_caption("CTR Network Visualization Tool (v.0.1.8)")
+pygame.display.set_caption("CTR Network Visualization Tool BETA (v.0.2.0)")
 #placeholder for app exit var
 done = False
 ignore_whitenoise = False
@@ -148,6 +148,14 @@ def isValidIP(ip):
 		socket.inet_aton(ip)
 		return True
 	except socket.error:
+		return False
+
+#Validate int
+def isInt(i):
+	try:
+		int(i)
+		return True
+	except:
 		return False
 
 #Validate file
@@ -476,35 +484,85 @@ class Packet:
 
 #========================== Main ==========================
 
-#Validate args
-if len(sys.argv) < 3:
-	print("Usage: python3 <script>.py PATH_OF_network.conf PATH_OF_triggers.conf file.pcap")
-	print("  If a pcap is not provided, script will sniff on default network interface")
+def showHelp():
+	print("Usage: python3 CTR_Network_Visualization.py -t /path/to/triggers.conf -n /path/to/network.conf [options]")
+	print("  Options:")
+	print("    --ignore-whitenoise: hide all traffic that does not match a trigger")
+	print("    -p /path/to/file.pcap (or --pcap): read traffic from pcap (multiple supported!)")
+	print("    -a INTEGER (e.g. -a 7000): set time acceleration for pcap reading")
+
+
+#Read args - code adapted from Brent Younce's Excalibur-CLI tool
+args = sys.argv[1:] #Get all arguments in an array	
+
+nconf_path = None #network.conf location
+tconf_path = None #triggers.conf location
+pcap_paths = [] #paths of pcaps to read from
+
+#find the length of the array for loops later on
+l = len(args)
+if l == 0:
+	showHelp()
 	exit(1)
-if not (isFile(sys.argv[1]) and isFile(sys.argv[2])):
-	print("Config file not found")
+
+#Collect, go through arguments
+for i in range(0,l):
+	currarg = str(args[i])
+	currarg_lower = currarg.lower() #we still need original
+	nextarg = None #helpful for -X VAL
+	if(i < l-1):
+		nextarg = args[i+1].strip()
+	#Begin parsing arguments
+	if currarg_lower == "-h" or currarg_lower == "help":
+		showHelp()
+	#Parse network.conf
+	elif currarg_lower == "-n":
+		if nextarg == None:
+			print(">>> -n requires the path of your network.conf <<<")
+			print(">>> Example: -n /root/network.conf            <<<")
+		else:
+			nconf_path = nextarg
+	elif currarg_lower == "-t":
+		if nextarg == None:
+			print(">>> -t requires the path of your triggers.conf<<<")
+			print(">>> Example: -t /root/triggers.conf           <<<")
+		else:
+			tconf_path = nextarg
+	elif currarg_lower == "-p" or currarg_lower == "--pcap":
+		if nextarg == None:
+			print(">>> -p or --pcap requires a pcap path         <<<")
+			print(">>> Example: --pcap /root/file.pcap           <<<")
+		else:
+			pcap_paths.append(nextarg)
+	elif currarg_lower == "-i" or currarg_lower == "--ignore-whitenoise":
+		ignore_whitenoise = True
+	elif currarg_lower == "-a" or currarg_lower == "--accel" or currarg_lower == "--acceleration":
+		if nextarg == None or not isInt(nextarg):
+			print(">>> -a or --accel requires an integer argument <<<")
+			print(">>> Example: --accel 1000                      <<<")
+		else:
+			viz_accel = int(nextarg)
+			print("Time acceleration set to " + str(viz_accel) + "X")
+
+
+#Ensure essential arguments are present
+if nconf_path == None or tconf_path == None:
+	showHelp()
 	exit(1)
 
 #Read, parse network.conf
-read_network_config(sys.argv[1])
+read_network_config(nconf_path)
 
 #Read, parse triggers.conf
-read_triggers_config(sys.argv[2])
+read_triggers_config(tconf_path)
 
-#Determine if user passed a pcap file
-if len(sys.argv) > 3:
-	if sys.argv[3] == "--ignore-whitenoise":
-		ignore_whitenoise = True
-		thread.start_new_thread(scapy_sniff, ())
-	else:
-		if len(sys.argv) > 4 and sys.argv[4] == "--ignore-whitenoise":
-			ignore_whitenoise = True
-		thread.start_new_thread(scapy_parse_pcap, (sys.argv[3],) )
-else:
-	#Launch network sniffer on thread 2 (gotta love Python)
+
+#launch sniffers
+if len(pcap_paths) == 0:
 	thread.start_new_thread(scapy_sniff, ())
-
-
+else:
+	for path in pcap_paths:
+		thread.start_new_thread(scapy_parse_pcap, (path,viz_accel,))
 
 #TODO: acceleration with scapy_parse_pcap function
 
@@ -556,14 +614,9 @@ while not done:
 	# - Test with more datasets, develop new examples
 	# - Add packet display scaling option
 	# -> Add more trigger options <-
-	# - Add time acceleration
 
 #Minor TODO:
-	# - Clean up how arguments are handled
 	# - Add more checking of conf files
-	# - Add support for multiple simultaneous inputs
-	# - Add more icons, etc.
-	# - Graphical improvements
 
 #========================== Changelog ==========================
 #0.2.0 (BETA 1) UNDER DEVELOPMENT
@@ -573,6 +626,9 @@ while not done:
 	#   intended to have, although not all.
 	#
 	# - Added input error checking for network.cfg LINE entries
+	# - Overhauled argument parsing
+	#   - Added support for -a/--accel in the process
+	#	- Added (experimental) support for multiple pcaps
 
 
 #0.1.8 (Triggers.conf update pt 2)
