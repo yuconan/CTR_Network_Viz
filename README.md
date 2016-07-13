@@ -4,10 +4,11 @@ A Network scenario visualization tool, under early development by Brent Younce f
 the Cyber Test Range at the Laboratory for Analytic Sciences.
 
 Usage: python3 CTR_Network_Visualization.py -t /path/to/triggers.conf -n /path/to/network.conf (options)<br />
-	Options:<br />
-	--ignore-whitenoise: hide all traffic that does not match a trigger<br />
-	-p /path/to/file.pcap (or --pcap): read traffic from pcap (multiple supported!)<br />
-	-a INTEGER (e.g. -a 7000): set time acceleration for pcap reading</br />
+    Options:<br />
+    --ignore-whitenoise: hide all traffic that does not match a trigger<br />
+    -p /path/to/file.pcap (or --pcap): read traffic from pcap (multiple supported!)<br />
+    -a INTEGER (e.g. -a 7000): set time acceleration for pcap reading</br />
+    -i iface (e.g. -i eth0): sniff on a specific interface (multiple supported!)<br />
 
 
 Dependencies: python3, scapy-python3, pygame-python3

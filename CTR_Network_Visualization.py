@@ -5,7 +5,7 @@
 #For the Cyber Test Range at LAS
 
 #Import standard lib dependencies
-import math, uuid, random, socket, os.path
+import math, uuid, random, socket, os.path, sys
 import _thread as thread
 from time import sleep
 #Import external dependencies
@@ -102,8 +102,11 @@ def scapy_callback(p):
 		packets.append ( obj )
 
 #Sniff network, call callback function on each packet
-def scapy_sniff():
-	sniff(filter="ip",prn=scapy_callback) 
+def scapy_sniff(i=None):
+	if i == None:
+		sniff(filter="ip",prn=scapy_callback) 
+	else:
+		sniff(filter="ip",prn=scapy_callback, iface=i.strip())
 
 #Automatic sniffing from pcap (realtime)
 def scapy_sniff_pcap(path):
@@ -491,6 +494,8 @@ def showHelp():
 	print("    --ignore-whitenoise: hide all traffic that does not match a trigger")
 	print("    -p /path/to/file.pcap (or --pcap): read traffic from pcap (multiple supported!)")
 	print("    -a INTEGER (e.g. -a 7000): set time acceleration for pcap reading")
+	print("    -i iface (e.g. -i eth0): sniff on a specific interface (multiple supported!)")
+	print(" If no interface or pcap is given, script will default to sniffing on default iface")
 
 
 #Read args - code adapted from Brent Younce's Excalibur-CLI tool
@@ -499,6 +504,7 @@ args = sys.argv[1:] #Get all arguments in an array
 nconf_path = None #network.conf location
 tconf_path = None #triggers.conf location
 pcap_paths = [] #paths of pcaps to read from
+ifaces = [] #interfaces to sniff on
 
 #find the length of the array for loops later on
 l = len(args)
@@ -538,7 +544,7 @@ for i in range(0,l):
 		else:
 			pcap_paths.append(nextarg)
 	#Parse --ignore-whitenoise
-	elif currarg_lower == "-i" or currarg_lower == "--ignore-whitenoise":
+	elif currarg_lower == "--ignore-whitenoise":
 		ignore_whitenoise = True
 	#Parse pcap time acceleration
 	elif currarg_lower == "-a" or currarg_lower == "--accel" or currarg_lower == "--acceleration":
@@ -548,6 +554,13 @@ for i in range(0,l):
 		else:
 			viz_accel = int(nextarg)
 			print("Time acceleration set to " + str(viz_accel) + "X")
+	#Parse ifaces
+	elif currarg_lower == "-i":
+		if nextarg == None:
+			print(">>> -i requires an interface to sniff on       <<<")
+			print(">>> Example: -i eth0                           <<<")
+		else:
+			ifaces.append(nextarg.strip().lower())
 
 
 #Ensure essential arguments are present
@@ -563,13 +576,14 @@ read_triggers_config(tconf_path)
 
 
 #launch sniffers
-if len(pcap_paths) == 0:
-	thread.start_new_thread(scapy_sniff, ())
+if len(pcap_paths) == 0 and len(ifaces) == 0:
+	thread.start_new_thread(scapy_sniff, ()) #sniff on default interface
 else:
 	for path in pcap_paths:
 		thread.start_new_thread(scapy_parse_pcap, (path,viz_accel,))
+	for iface in ifaces:
+		thread.start_new_thread(scapy_sniff, (iface,))
 
-#TODO: acceleration with scapy_parse_pcap function
 
 #Turn on screen
 screen = pygame.display.set_mode((screen_width, screen_height))
@@ -634,6 +648,7 @@ while not done:
 	# - Overhauled argument parsing
 	#   - Added support for -a/--accel in the process
 	#	- Added (experimental) support for multiple pcaps
+	#   - Added support for specifying interfaces to sniff on
 	# - Added 'hide' trigger
 
 

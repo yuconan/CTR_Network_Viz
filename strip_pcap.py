@@ -29,6 +29,7 @@ def read_triggers_config(path="triggers.conf"):
 	f.close()
 	return
 
+#modified ver
 def matchesTrigger(p, arr):
 	try:
 		src_ip = p[IP].src
